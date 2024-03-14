@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS accounts (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(15) NOT NULL ,
+    account_name VARCHAR(15) NOT NULL,
+    account_number VARCHAR(15) NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL
+);
