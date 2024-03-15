@@ -66,6 +66,33 @@ func (ps *ProductStore) UpdateProduct(ctx context.Context, product *model.Produc
 	return product, nil
 }
 
+func (ps *ProductStore) UpdateProductStock(ctx context.Context, product *model.Product) (*model.Product, error) {
+	query := "UPDATE products SET stock=$1 WHERE id=$2"
+	result, err := ps.db.ExecContext(ctx, query, product.Stock, product.Id)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update product")
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	return product, nil
+}
+
+func (ps *ProductStore) Payment(ctx context.Context, payment *model.Payment) error {
+
+	query := "INSERT INTO payments (account_id, product_id, payment_proof_image_url, quantity) VALUES($1, $2, $3, $4) RETURNING id"
+	err := ps.db.QueryRowContext(ctx, query, payment.AccountId, payment.ProductId, payment.PaymentProofImageUrl, payment.Quantity).Scan(&payment.Id)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to create payment")
+	}
+
+	return nil
+}
+
 func (ps *ProductStore) DeleteProduct(ctx context.Context, id uint) error {
 	query := "DELETE FROM products WHERE id = $1"
 	result, err := ps.db.ExecContext(ctx, query, id)
@@ -238,7 +265,7 @@ func (ps *ProductStore) GetProducts(ctx context.Context, queryParams url.Values)
 	for rows.Next() {
 		var product model.Product
 		var tagsJSON []byte
-		if err := rows.Scan(&product.Id, &product.Name, &product.Price, &product.ImageUrl, &product.Stock, &product.Condition, &tagsJSON, &product.IsPurchasable, &product.PurchaseCount, &product.UserId ); err != nil {
+		if err := rows.Scan(&product.Id, &product.Name, &product.Price, &product.ImageUrl, &product.Stock, &product.Condition, &tagsJSON, &product.IsPurchasable, &product.PurchaseCount, &product.UserId); err != nil {
 			return nil, meta, errors.Wrap(err, "failed to scan product data")
 		}
 		if err := json.Unmarshal(tagsJSON, &product.Tags); err != nil {

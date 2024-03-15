@@ -169,3 +169,99 @@ func HandleGetProducts(ps *ps.ProductStore) http.HandlerFunc {
 		render.JSON(w, response, http.StatusOK)
 	}
 }
+
+func UpdateStock(ps *ps.ProductStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+
+		productId, err := strconv.ParseUint(id, 10, 64)
+		if err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+
+		var req updateProductStockRequest
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+		defer r.Body.Close()
+
+		if err := json.Unmarshal(body, &req); err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+
+		if err := ps.Validate.Struct(req); err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+		product := model.Product{
+			Id:    uint(productId),
+			Stock: uint(req.Stock),
+		}
+		result, err := ps.UpdateProductStock(r.Context(), &product)
+
+		if result == nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				render.NotFound(w, errors.New("product not found"))
+				return
+			}
+			render.InternalError(w, err)
+			return
+		}
+		w.WriteHeader(200)
+	}
+}
+
+func Buy(ps *ps.ProductStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+
+		productId, err := strconv.ParseUint(id, 10, 64)
+		if err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+
+		// TODO: BUY REQUEST
+		var req buyProductRequest
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+		defer r.Body.Close()
+
+		if err := json.Unmarshal(body, &req); err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+
+		if err := ps.Validate.Struct(req); err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+
+		accountId, err := strconv.ParseUint(req.BankAccountId, 10, 64)
+		if err != nil {
+			render.BadRequest(w, err)
+			return
+		}
+		payment := model.Payment{
+			Id:                   uint(productId),
+			AccountId:            uint(accountId),
+			ProductId:            uint(productId),
+			PaymentProofImageUrl: req.PaymentProofImageUrl,
+			Quantity:             uint(req.Quantity),
+		}
+		err = ps.Payment(r.Context(), &payment)
+		if err != nil {
+			render.InternalError(w, err)
+			return
+		}
+
+		w.WriteHeader(200)
+	}
+}

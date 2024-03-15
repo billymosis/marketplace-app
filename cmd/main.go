@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/billymosis/marketplace-app/db"
 	"github.com/billymosis/marketplace-app/handler/api"
 	as "github.com/billymosis/marketplace-app/store/account"
@@ -32,6 +36,16 @@ func main() {
 	password := os.Getenv("DB_PASSWORD")
 	maxOpenConnections := 100
 
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion("ap-southeast-1"),
+		config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				os.Getenv("S3_ID"), os.Getenv("S3_SECRET_KEY"), "",
+			)))
+
+	s3Client := s3.NewFromConfig(cfg)
+
 	db, err := db.Connection("postgres", host, database, user, password, port, maxOpenConnections)
 	if err != nil {
 		log.Fatal(err)
@@ -42,7 +56,7 @@ func main() {
 	productStore := ps.NewProductStore(db, validate)
 	accountStore := as.NewAccountStore(db, validate)
 
-	r := api.New(userStore, productStore, accountStore)
+	r := api.New(userStore, productStore, accountStore, s3Client)
 	h := r.Handler()
 
 	logrus.Info("application starting")
