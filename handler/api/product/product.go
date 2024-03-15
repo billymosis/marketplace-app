@@ -35,13 +35,13 @@ func HandleCreateProduct(ps *ps.ProductStore) http.HandlerFunc {
 			return
 		}
 		product := model.Product{
-			Name:           req.Name,
-			Tags:           req.Tags,
-			Price:          uint(req.Price),
-			Stock:          uint(req.Stock),
-			ImageUrl:       req.ImageURL,
-			Condition:      req.Condition,
-			IsPurchaseable: req.IsPurchaseable,
+			Name:          req.Name,
+			Tags:          req.Tags,
+			Price:         uint(req.Price),
+			Stock:         uint(req.Stock),
+			ImageUrl:      req.ImageURL,
+			Condition:     req.Condition,
+			IsPurchasable: req.IsPurchasable,
 		}
 		result, err := ps.CreateProduct(r.Context(), &product)
 
@@ -81,14 +81,14 @@ func HandleUpdateProduct(ps *ps.ProductStore) http.HandlerFunc {
 			return
 		}
 		product := model.Product{
-			Id:             uint(productId),
-			Name:           req.Name,
-			Tags:           req.Tags,
-			Price:          uint(req.Price),
-			Stock:          uint(req.Stock),
-			ImageUrl:       req.ImageURL,
-			Condition:      req.Condition,
-			IsPurchaseable: req.IsPurchaseable,
+			Id:            uint(productId),
+			Name:          req.Name,
+			Tags:          req.Tags,
+			Price:         uint(req.Price),
+			Stock:         uint(req.Stock),
+			ImageUrl:      req.ImageURL,
+			Condition:     req.Condition,
+			IsPurchasable: req.IsPurchasable,
 		}
 		result, err := ps.UpdateProduct(r.Context(), &product)
 
@@ -136,10 +136,25 @@ func HandleGetProducts(ps *ps.ProductStore) http.HandlerFunc {
 			render.InternalError(w, err)
 			return
 		}
+		var pr []ProductResponse
+
+		for _, element := range products {
+			pr = append(pr, ProductResponse{
+				ProductId:     strconv.FormatUint(uint64(element.Id), 10),
+				Name:          element.Name,
+				Price:         element.Price,
+				ImageUrl:      element.ImageUrl,
+				Stock:         element.Stock,
+				Condition:     element.Condition,
+				Tags:          element.Tags,
+				IsPurchasable: element.IsPurchasable,
+				PurchaseCount: element.PurchaseCount,
+			})
+		}
 
 		response := GetProductsResponse{
 			Message: "ok",
-			Data:    products,
+			Data:    pr,
 			Meta: struct {
 				Limit  int `json:"limit"`
 				Offset int `json:"offset"`

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS products (
     stock INTEGER NOT NULL,
     condition VARCHAR(10) NOT NULL CHECK (condition IN ('new', 'second')),
     tags JSONB NOT NULL DEFAULT '[]'::jsonb,
-    is_purchaseable BOOLEAN NOT NULL,
+    is_purchasable BOOLEAN NOT NULL,
+    purchase_count INTEGER NOT NULL DEFAULT 0, 
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE NOT NULL
 );

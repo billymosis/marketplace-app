@@ -18,10 +18,17 @@ type jwtCustomClaims struct {
 
 func GenerateToken(id uint, userName string) (string, error) {
 	now := time.Now()
+	var expiration time.Time
+	environment := os.Getenv("ENVIRONMENT")
+	if environment == "production" {
+		expiration = now.Add(time.Minute * 2)
+	} else {
+		expiration = now.Add(time.Hour * 1)
+	}
 	claims := &jwtCustomClaims{
 		UserId: id,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: now.Add(time.Minute * 60).Unix(),
+			ExpiresAt: expiration.Unix(),
 		},
 	}
 

@@ -36,8 +36,8 @@ func (ps *ProductStore) CreateProduct(ctx context.Context, product *model.Produc
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get user id")
 	}
-	query := "INSERT INTO products (name, price, image_url, stock, condition, tags, is_purchaseable, user_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
-	err = ps.db.QueryRowContext(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchaseable, userId).Scan(&product.Id)
+	query := "INSERT INTO products (name, price, image_url, stock, condition, tags, is_purchasable, user_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
+	err = ps.db.QueryRowContext(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchasable, userId).Scan(&product.Id)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create product")
@@ -52,8 +52,8 @@ func (ps *ProductStore) UpdateProduct(ctx context.Context, product *model.Produc
 		return nil, errors.Wrap(err, "failed to marshal tags to JSON")
 	}
 
-	query := "UPDATE products SET name=$1, price=$2, image_url=$3, stock=$4, condition=$5, tags=$6, is_purchaseable=$7 WHERE id=$8"
-	result, err := ps.db.ExecContext(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchaseable, product.Id)
+	query := "UPDATE products SET name=$1, price=$2, image_url=$3, stock=$4, condition=$5, tags=$6, is_purchasable=$7 WHERE id=$8"
+	result, err := ps.db.ExecContext(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchasable, product.Id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update product")
 	}
@@ -111,14 +111,12 @@ func (ps *ProductStore) GetProducts(ctx context.Context, queryParams url.Values)
 
 	var meta Meta
 	userId, err := auth.GetUserId(ctx)
-	if err != nil {
-		return nil, meta, errors.Wrap(err, "failed to get user id")
-	}
-
 	q := Query{}
 	q.Query("SELECT * FROM products WHERE")
-
 	userOnlyStr := queryParams.Get("userOnly")
+	if err != nil {
+		userOnlyStr = "false"
+	}
 	tags := queryParams["tags"]
 	condition := queryParams.Get("condition")
 	showEmptyStockStr := queryParams.Get("showEmptyStock")
@@ -240,7 +238,7 @@ func (ps *ProductStore) GetProducts(ctx context.Context, queryParams url.Values)
 	for rows.Next() {
 		var product model.Product
 		var tagsJSON []byte
-		if err := rows.Scan(&product.Id, &product.Name, &product.Price, &product.ImageUrl, &product.Stock, &product.Condition, &tagsJSON, &product.IsPurchaseable, &product.UserId); err != nil {
+		if err := rows.Scan(&product.Id, &product.Name, &product.Price, &product.ImageUrl, &product.Stock, &product.Condition, &tagsJSON, &product.IsPurchasable, &product.PurchaseCount, &product.UserId ); err != nil {
 			return nil, meta, errors.Wrap(err, "failed to scan product data")
 		}
 		if err := json.Unmarshal(tagsJSON, &product.Tags); err != nil {
@@ -248,13 +246,10 @@ func (ps *ProductStore) GetProducts(ctx context.Context, queryParams url.Values)
 		}
 		products = append(products, &product)
 	}
-	logrus.Printf("LEN: %+v\n", len(products))
 
 	countQuery := strings.Replace(query, "SELECT *", "SELECT COUNT(*)", 1)
 	countQuery = strings.Split(countQuery, "LIMIT")[0]
 	params = params[:len(params)-2]
-	logrus.Printf("COUNT QUERY: %+v\n", countQuery)
-	logrus.Printf("PARAMS QUERY: %+v\n", params)
 	var count int
 	err = ps.db.QueryRow(countQuery, params...).Scan(&count)
 

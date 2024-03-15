@@ -11,6 +11,7 @@ import (
 
 	"github.com/billymosis/marketplace-app/db"
 	"github.com/billymosis/marketplace-app/handler/api"
+	as "github.com/billymosis/marketplace-app/store/account"
 	ps "github.com/billymosis/marketplace-app/store/product"
 	us "github.com/billymosis/marketplace-app/store/user"
 	"github.com/go-playground/validator/v10"
@@ -39,8 +40,9 @@ func main() {
 
 	userStore := us.NewUserStore(db, validate)
 	productStore := ps.NewProductStore(db, validate)
+	accountStore := as.NewAccountStore(db, validate)
 
-	r := api.New(userStore, productStore)
+	r := api.New(userStore, productStore, accountStore)
 	h := r.Handler()
 
 	logrus.Info("application starting")
