@@ -8,3 +8,4 @@ tmp
 *.test
 *.out
 go.work
+main
