@@ -9,3 +9,4 @@ tmp
 *.out
 go.work
 main
+*.pem

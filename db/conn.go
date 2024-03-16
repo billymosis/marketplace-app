@@ -3,8 +3,10 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
+	"os"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 func Connection(driver, host, database, username, password string, port, maxOpenConnections int) (*sql.DB, error) {
@@ -56,6 +58,10 @@ func parseDSN(driver, host, database, username, password string, port int) (stri
 }
 
 func postgreParseDSN(host, database, username, password string, port int) string {
+	if os.Getenv("ENV") == "production" {
+		return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=verify-full sslrootcert=ap-southeast-1-bundle.pem TimeZone=UTC",
+			host, port, username, password, database)
+	}
 	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, username, password, database)
 }
