@@ -1,6 +1,7 @@
 package image
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -44,6 +45,10 @@ func Upload(client *s3.Client) http.HandlerFunc {
 
 		r.Body = http.MaxBytesReader(w, r.Body, 2*1024*1024)
 		file, handler, err := r.FormFile("file")
+		if file == nil {
+			render.ErrorCode(w, errors.New("empty"), 400)
+			return
+		}
 		if err != nil {
 			http.Error(w, "Failed to retrieve file from form data", http.StatusBadRequest)
 			return

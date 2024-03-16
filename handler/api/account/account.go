@@ -58,6 +58,9 @@ func Create(as *as.AccountStore) http.HandlerFunc {
 func Update(as *as.AccountStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
+		if id == "" {
+			render.NotFound(w, errors.New("not found") )
+		}
 
 		accountId, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
@@ -106,6 +109,9 @@ func Update(as *as.AccountStore) http.HandlerFunc {
 func Delete(as *as.AccountStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
+		if id == "" {
+			render.NotFound(w, errors.New("not found") )
+		}
 
 		productId, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {

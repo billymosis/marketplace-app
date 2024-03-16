@@ -69,7 +69,7 @@ func (s Server) Handler() http.Handler {
 				r.Post("/{id}/buy", product.Buy(s.Products))
 			})
 		})
-		r.Route("/account", func(r chi.Router) {
+		r.Route("/bank/account", func(r chi.Router) {
 			r.Use(AppMiddleware.ValidateJWT)
 			r.Post("/", account.Create(s.Accounts))
 			r.Patch("/{id}", account.Update(s.Accounts))

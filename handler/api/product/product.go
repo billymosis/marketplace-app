@@ -58,6 +58,9 @@ func HandleCreateProduct(ps *ps.ProductStore) http.HandlerFunc {
 func HandleUpdateProduct(ps *ps.ProductStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
+		if id == "" {
+			render.NotFound(w, errors.New("not found"))
+		}
 
 		productId, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
@@ -221,7 +224,7 @@ func GetProductDetail(ps *ps.ProductStore, as *as.AccountStore) http.HandlerFunc
 				Seller: Seller{
 					Name:             "John",
 					ProductSoldTotal: total,
-					BankAccounts: ba,
+					BankAccounts:     ba,
 				},
 			},
 		}
@@ -233,6 +236,9 @@ func GetProductDetail(ps *ps.ProductStore, as *as.AccountStore) http.HandlerFunc
 func UpdateStock(ps *ps.ProductStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
+		if id == "" {
+			render.NotFound(w, errors.New("not found"))
+		}
 
 		productId, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
@@ -278,6 +284,9 @@ func UpdateStock(ps *ps.ProductStore) http.HandlerFunc {
 func Buy(ps *ps.ProductStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
+		if id == "" {
+			render.NotFound(w, errors.New("not found"))
+		}
 
 		productId, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {

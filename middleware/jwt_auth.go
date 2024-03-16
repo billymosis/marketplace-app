@@ -13,7 +13,12 @@ import (
 
 func ValidateJWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := strings.Split(r.Header.Get("Authorization"), "Bearer ")
+		head := r.Header.Get("Authorization")
+		if head == "" {
+			render.Unauthorized(w, errors.New("No header found"))
+			return
+		}
+		authHeader := strings.Split(head, "Bearer ")
 		if len(authHeader) != 2 {
 			render.Forbidden(w, errors.New("authorization not found in header"))
 			return
