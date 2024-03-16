@@ -14,5 +14,20 @@ services:
     volumes:
       - marketplace-db:/var/lib/postgresql/data
 
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana-oss:10.0.12
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
 volumes:
   marketplace-db:
+  grafana-storage:

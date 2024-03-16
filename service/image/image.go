@@ -50,19 +50,16 @@ func Upload(client *s3.Client) http.HandlerFunc {
 		}
 		defer file.Close()
 
-		// Validate file extension
 		if !isValidFile(handler.Filename) {
 			http.Error(w, "Invalid file format. Must be *.jpg or *.jpeg", http.StatusBadRequest)
 			return
 		}
 
-		// Validate file size
 		if !isValidFileSize(handler.Size) {
 			http.Error(w, "File size must be between 10KB and 2MB", http.StatusBadRequest)
 			return
 		}
 
-		// Generate unique filename
 		filename := uuid.New().String() + filepath.Ext(handler.Filename)
 		sess := s3.New(client.Options())
 
@@ -80,7 +77,7 @@ func Upload(client *s3.Client) http.HandlerFunc {
 		}
 		logrus.Printf("S3: %+v", res.ResultMetadata)
 
-		url := fmt.Sprintf("https://%s.%s/%s", bucket, os.Getenv("S3_BASE_URL"), filename)
+		url := fmt.Sprintf("https://%s.%s/%s", bucket, "s3.amazonaws.com", filename)
 
 		render.JSON(w, uploadResponse{ImageUrl: url}, 200)
 	}

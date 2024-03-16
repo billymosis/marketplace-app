@@ -8,6 +8,7 @@ import (
 	"github.com/billymosis/marketplace-app/service/auth"
 	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type AccountStore struct {
@@ -70,6 +71,9 @@ func (ps *AccountStore) Delete(ctx context.Context, id uint) error {
 func (ps *AccountStore) Get(ctx context.Context) ([]*model.Account, error) {
 	query := "SELECT * FROM accounts"
 	rows, err := ps.db.Query(query)
+	if err != nil {
+		return nil, errors.Wrap(err, "Get account failed")
+	}
 	var accounts []*model.Account
 
 	for rows.Next() {
@@ -79,8 +83,29 @@ func (ps *AccountStore) Get(ctx context.Context) ([]*model.Account, error) {
 		}
 		accounts = append(accounts, &product)
 	}
+	if accounts == nil {
+		accounts = []*model.Account{}
+	}
+
+	return accounts, nil
+}
+
+func (ps *AccountStore) GetAccountByUser(ctx context.Context, id uint) ([]*model.Account, error) {
+	query := "SELECT * FROM accounts WHERE user_id = $1"
+	logrus.Printf("%+v\n", query)
+
+	rows, err := ps.db.Query(query, id)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to delete account")
+		return nil, errors.Wrap(err, "Get account failed")
+	}
+	var accounts []*model.Account
+
+	for rows.Next() {
+		var product model.Account
+		if err := rows.Scan(&product.Id, &product.Name, &product.AccountName, &product.AccountNumber, &product.UserId); err != nil {
+			return nil, errors.Wrap(err, "failed to scan account data")
+		}
+		accounts = append(accounts, &product)
 	}
 	if accounts == nil {
 		accounts = []*model.Account{}

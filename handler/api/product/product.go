@@ -10,8 +10,10 @@ import (
 
 	"github.com/billymosis/marketplace-app/handler/render"
 	"github.com/billymosis/marketplace-app/model"
+	as "github.com/billymosis/marketplace-app/store/account"
 	ps "github.com/billymosis/marketplace-app/store/product"
 	"github.com/go-chi/chi"
+	"github.com/sirupsen/logrus"
 )
 
 func HandleCreateProduct(ps *ps.ProductStore) http.HandlerFunc {
@@ -170,6 +172,64 @@ func HandleGetProducts(ps *ps.ProductStore) http.HandlerFunc {
 	}
 }
 
+func GetProductDetail(ps *ps.ProductStore, as *as.AccountStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 64)
+		product, err := ps.GetProductById(r.Context(), uint(id))
+		if err != nil {
+			render.InternalError(w, err)
+			return
+		}
+		accounts, err := as.GetAccountByUser(r.Context(), product.UserId)
+		total, err := ps.GetTotalSold(r.Context(), uint(id))
+		logrus.Printf("%+v\n", accounts)
+		logrus.Printf("%+v\n", total)
+		if err != nil {
+			render.InternalError(w, err)
+			return
+		}
+		var ba []BankAccount
+		for _, element := range accounts {
+			ba = append(ba, BankAccount{
+				BankAccountID:     strconv.FormatUint(uint64(element.Id), 10),
+				BankName:          element.Name,
+				BankAccountName:   element.AccountName,
+				BankAccountNumber: element.AccountNumber,
+			})
+
+		}
+		logrus.Printf("%+v\n", product)
+		logrus.Printf("%+v\n", ba)
+		response := GetProductDetailResponse{
+			Message: "ok",
+			Data: struct {
+				Product ProductResponse `json:"product"`
+				Seller  Seller          `json:"seller"`
+			}{
+
+				Product: ProductResponse{
+					ProductId:     strconv.FormatUint(uint64(product.Id), 10),
+					Name:          product.Name,
+					Price:         product.Price,
+					ImageUrl:      product.ImageUrl,
+					Stock:         product.Stock,
+					Condition:     product.Condition,
+					Tags:          product.Tags,
+					IsPurchasable: product.IsPurchasable,
+					PurchaseCount: product.PurchaseCount,
+				},
+				Seller: Seller{
+					Name:             "John",
+					ProductSoldTotal: total,
+					BankAccounts: ba,
+				},
+			},
+		}
+
+		render.JSON(w, response, http.StatusOK)
+	}
+}
+
 func UpdateStock(ps *ps.ProductStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
@@ -225,7 +285,6 @@ func Buy(ps *ps.ProductStore) http.HandlerFunc {
 			return
 		}
 
-		// TODO: BUY REQUEST
 		var req buyProductRequest
 		body, err := io.ReadAll(r.Body)
 		if err != nil {

@@ -88,6 +88,17 @@ func (ps *ProductStore) Payment(ctx context.Context, payment *model.Payment) err
 
 	if err != nil {
 		return errors.Wrap(err, "failed to create payment")
+	} else {
+		logrus.Printf("TAMBHAHAHHA")
+		query = `
+			UPDATE products
+			SET purchase_count = purchase_count + 1
+			WHERE id = $1;
+		`
+		_, err := ps.db.Exec(query, payment.ProductId)
+		if err != nil {
+			return nil
+		}
 	}
 
 	return nil
@@ -107,6 +118,39 @@ func (ps *ProductStore) DeleteProduct(ctx context.Context, id uint) error {
 
 	return nil
 
+}
+
+func (ps *ProductStore) GetProductById(ctx context.Context, id uint) (*model.Product, error) {
+	query := "SELECT * FROM products WHERE id = $1"
+
+	rows := ps.db.QueryRow(query, id)
+	var product model.Product
+	var tagsJSON []byte
+	if err := rows.Scan(&product.Id, &product.Name, &product.Price, &product.ImageUrl, &product.Stock, &product.Condition, &tagsJSON, &product.IsPurchasable, &product.PurchaseCount, &product.UserId); err != nil {
+		return nil, errors.Wrap(err, "failed to scan product data")
+	}
+	if err := json.Unmarshal(tagsJSON, &product.Tags); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal tags JSON")
+	}
+	return &product, nil
+}
+
+func (ps *ProductStore) GetTotalSold(ctx context.Context, productId uint) (int, error) {
+	query := `
+		SELECT
+		    SUM(quantity) AS total_quantity
+		FROM
+		    payments
+		WHERE
+		    product_id = $1;
+	`
+
+	rows := ps.db.QueryRow(query, productId)
+	var total int
+	if err := rows.Scan(&total); err != nil {
+		return 0, errors.Wrap(err, "failed to scan product data")
+	}
+	return total, nil
 }
 
 type Query struct {
@@ -135,7 +179,6 @@ type Meta struct {
 }
 
 func (ps *ProductStore) GetProducts(ctx context.Context, queryParams url.Values) ([]*model.Product, Meta, error) {
-
 	var meta Meta
 	userId, err := auth.GetUserId(ctx)
 	q := Query{}

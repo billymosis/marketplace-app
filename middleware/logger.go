@@ -1,4 +1,4 @@
-package middleware1
+package AppMiddleware
 
 import (
 	"github.com/sirupsen/logrus"
@@ -7,7 +7,6 @@ import (
 )
 
 func Logger(next http.Handler) http.Handler {
-
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		logStartOfRequest(r)
 		then := time.Now()
