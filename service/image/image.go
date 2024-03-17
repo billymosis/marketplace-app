@@ -39,7 +39,7 @@ func Upload(client *s3.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
-			http.Error(w, "Unsupported media type", http.StatusUnsupportedMediaType)
+			http.Error(w, "Failed to retrieve file from form data", http.StatusBadRequest)
 			return
 		}
 

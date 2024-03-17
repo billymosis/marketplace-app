@@ -34,7 +34,7 @@ func HandleAuthentication(us model.UserStore) http.HandlerFunc {
 			return
 		}
 
-		user, err := us.GetByUsername(req.Username)
+		user, err := us.GetByUsername(r.Context(), req.Username)
 
 		if err != nil {
 			render.NotFound(w, errors.New("User not found"))

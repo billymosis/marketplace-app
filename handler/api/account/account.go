@@ -1,23 +1,18 @@
 package account
 
 import (
-	// "database/sql"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"strconv"
 
-	// "errors"
 	"io"
 	"net/http"
-
-	// "strconv"
 
 	"github.com/billymosis/marketplace-app/handler/render"
 	"github.com/billymosis/marketplace-app/model"
 	as "github.com/billymosis/marketplace-app/store/account"
-	"github.com/go-chi/chi"
-	// "github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 func Create(as *as.AccountStore) http.HandlerFunc {
@@ -64,7 +59,7 @@ func Update(as *as.AccountStore) http.HandlerFunc {
 
 		accountId, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
-			render.BadRequest(w, err)
+			render.NotFound(w, errors.New("not found") )
 			return
 		}
 

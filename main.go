@@ -87,8 +87,6 @@ func main() {
 	logrus.Info("application shutting down")
 
 	log.Println("database closing")
-	if err := db.Close(); err != nil {
-		panic(err)
-	}
+	db.Close()
 	log.Println("database closed")
 }

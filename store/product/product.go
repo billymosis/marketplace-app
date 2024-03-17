@@ -11,16 +11,17 @@ import (
 	"github.com/billymosis/marketplace-app/model"
 	"github.com/billymosis/marketplace-app/service/auth"
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 type ProductStore struct {
-	db       *sql.DB
+	db       *pgxpool.Pool
 	Validate *validator.Validate
 }
 
-func NewProductStore(db *sql.DB, validate *validator.Validate) *ProductStore {
+func NewProductStore(db *pgxpool.Pool, validate *validator.Validate) *ProductStore {
 	return &ProductStore{
 		db:       db,
 		Validate: validate,
@@ -37,7 +38,7 @@ func (ps *ProductStore) CreateProduct(ctx context.Context, product *model.Produc
 		return nil, errors.Wrap(err, "failed to get user id")
 	}
 	query := "INSERT INTO products (name, price, image_url, stock, condition, tags, is_purchasable, user_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id"
-	err = ps.db.QueryRowContext(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchasable, userId).Scan(&product.Id)
+	err = ps.db.QueryRow(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchasable, userId).Scan(&product.Id)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create product")
@@ -53,12 +54,12 @@ func (ps *ProductStore) UpdateProduct(ctx context.Context, product *model.Produc
 	}
 
 	query := "UPDATE products SET name=$1, price=$2, image_url=$3, stock=$4, condition=$5, tags=$6, is_purchasable=$7 WHERE id=$8"
-	result, err := ps.db.ExecContext(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchasable, product.Id)
+	result, err := ps.db.Exec(ctx, query, product.Name, product.Price, product.ImageUrl, product.Stock, product.Condition, tagsJSON, product.IsPurchasable, product.Id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update product")
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected := result.RowsAffected()
 	if rowsAffected == 0 {
 		return nil, sql.ErrNoRows
 	}
@@ -68,12 +69,12 @@ func (ps *ProductStore) UpdateProduct(ctx context.Context, product *model.Produc
 
 func (ps *ProductStore) UpdateProductStock(ctx context.Context, product *model.Product) (*model.Product, error) {
 	query := "UPDATE products SET stock=$1 WHERE id=$2"
-	result, err := ps.db.ExecContext(ctx, query, product.Stock, product.Id)
+	result, err := ps.db.Exec(ctx, query, product.Stock, product.Id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update product")
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected  := result.RowsAffected()
 	if rowsAffected == 0 {
 		return nil, sql.ErrNoRows
 	}
@@ -84,7 +85,7 @@ func (ps *ProductStore) UpdateProductStock(ctx context.Context, product *model.P
 func (ps *ProductStore) Payment(ctx context.Context, payment *model.Payment) error {
 
 	query := "INSERT INTO payments (account_id, product_id, payment_proof_image_url, quantity) VALUES($1, $2, $3, $4) RETURNING id"
-	err := ps.db.QueryRowContext(ctx, query, payment.AccountId, payment.ProductId, payment.PaymentProofImageUrl, payment.Quantity).Scan(&payment.Id)
+	err := ps.db.QueryRow(ctx, query, payment.AccountId, payment.ProductId, payment.PaymentProofImageUrl, payment.Quantity).Scan(&payment.Id)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to create payment")
@@ -95,7 +96,7 @@ func (ps *ProductStore) Payment(ctx context.Context, payment *model.Payment) err
 			SET purchase_count = purchase_count + 1
 			WHERE id = $1;
 		`
-		_, err := ps.db.Exec(query, payment.ProductId)
+		_, err := ps.db.Exec(ctx, query, payment.ProductId)
 		if err != nil {
 			return nil
 		}
@@ -106,12 +107,12 @@ func (ps *ProductStore) Payment(ctx context.Context, payment *model.Payment) err
 
 func (ps *ProductStore) DeleteProduct(ctx context.Context, id uint) error {
 	query := "DELETE FROM products WHERE id = $1"
-	result, err := ps.db.ExecContext(ctx, query, id)
+	result, err := ps.db.Exec(ctx, query, id)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete product")
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected  := result.RowsAffected()
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
 	}
@@ -123,7 +124,7 @@ func (ps *ProductStore) DeleteProduct(ctx context.Context, id uint) error {
 func (ps *ProductStore) GetProductById(ctx context.Context, id uint) (*model.Product, error) {
 	query := "SELECT * FROM products WHERE id = $1"
 
-	rows := ps.db.QueryRow(query, id)
+	rows := ps.db.QueryRow(ctx, query, id)
 	var product model.Product
 	var tagsJSON []byte
 	if err := rows.Scan(&product.Id, &product.Name, &product.Price, &product.ImageUrl, &product.Stock, &product.Condition, &tagsJSON, &product.IsPurchasable, &product.PurchaseCount, &product.UserId); err != nil {
@@ -145,7 +146,7 @@ func (ps *ProductStore) GetTotalSold(ctx context.Context, productId uint) (int, 
 		    product_id = $1;
 	`
 
-	rows := ps.db.QueryRow(query, productId)
+	rows := ps.db.QueryRow(ctx, query, productId)
 	var total int
 	if err := rows.Scan(&total); err != nil {
 		return 0, errors.Wrap(err, "failed to scan product data")
@@ -300,7 +301,7 @@ func (ps *ProductStore) GetProducts(ctx context.Context, queryParams url.Values)
 	logrus.Printf("%+v\n", query)
 	logrus.Printf("%+v\n", params)
 
-	rows, err := ps.db.Query(query, params...)
+	rows, err := ps.db.Query(ctx, query, params...)
 	if err != nil {
 		return nil, meta, errors.Wrap(err, "failed to get product")
 	}
@@ -321,7 +322,7 @@ func (ps *ProductStore) GetProducts(ctx context.Context, queryParams url.Values)
 	countQuery = strings.Split(countQuery, "LIMIT")[0]
 	params = params[:len(params)-2]
 	var count int
-	err = ps.db.QueryRow(countQuery, params...).Scan(&count)
+	err = ps.db.QueryRow(ctx, countQuery, params...).Scan(&count)
 
 	if err != nil {
 		return nil, meta, errors.Wrap(err, "failed to scan product data")

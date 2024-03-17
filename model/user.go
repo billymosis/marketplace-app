@@ -15,8 +15,8 @@ const (
 )
 
 type UserStore interface {
-	GetById(id uint) (*User, error)
-	GetByUsername(string) (*User, error)
+	GetById(ctx context.Context, id uint) (*User, error)
+	GetByUsername(ctx context.Context, name string) (*User, error)
 	CreateUser(context.Context, *User) (*User, error)
 	GetValidator() *validator.Validate
 }

@@ -1,21 +1,24 @@
 package db
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 )
 
-func Connection(driver, host, database, username, password string, port, maxOpenConnections int) (*sql.DB, error) {
-	dsn, err := parseDSN(driver, host, database, username, password, port)
+func Connection(driver, host, database, username, password string, port, maxOpenConnections int) (*pgxpool.Pool, error) {
+	dsn, err := parseDSN(driver, host, database, username, password, port, maxOpenConnections)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := sql.Open(driver, dsn)
+	db, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		//debug.PrintStack()
 		return nil, err
@@ -25,43 +28,45 @@ func Connection(driver, host, database, username, password string, port, maxOpen
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(maxOpenConnections)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxIdleTime(1 * time.Second)
-	db.SetConnMaxLifetime(30 * time.Second)
+	pool, err := pgxpool.NewWithConfig(context.Background(), db)
 
-	return db, nil
+	return pool, err
 }
 
-func pingDatabase(db *sql.DB) error {
+func pingDatabase(db *pgxpool.Config) error {
+	pool, err := pgxpool.NewWithConfig(context.Background(), db)
+	if err != nil {
+		log.Fatal(err)
+		pool.Close()
+		return errPingDatabase
+	}
 	r := 3
 	for i := 0; i < r; i++ {
-		err := db.Ping()
+		err := pool.Ping(context.Background())
 		if err == nil {
 			return nil
 		}
 		time.Sleep(1 * time.Second)
 	}
-
-	//debug.PrintStack()
+	pool.Close()
 	return errPingDatabase
 }
 
-func parseDSN(driver, host, database, username, password string, port int) (string, error) {
+func parseDSN(driver, host, database, username, password string, port int, maxconn int) (string, error) {
 
 	switch driver {
 	case "postgres":
-		return postgreParseDSN(host, database, username, password, port), nil
+		return postgreParseDSN(host, database, username, password, port, maxconn), nil
 	default:
 		return "", errUnSupportedDriver
 	}
 }
 
-func postgreParseDSN(host, database, username, password string, port int) string {
+func postgreParseDSN(host, database, username, password string, port int, maxconn int) string {
 	if os.Getenv("ENV") == "production" {
-		return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=verify-full sslrootcert=ap-southeast-1-bundle.pem TimeZone=UTC",
-			host, port, username, password, database)
+		return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s pool_max_conns=%s sslmode=verify-full sslrootcert=ap-southeast-1-bundle.pem TimeZone=UTC",
+			host, port, username, password, database, strconv.Itoa(maxconn))
 	}
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		host, port, username, password, database)
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s pool_max_conns=%s sslmode=disable",
+		host, port, username, password, database, strconv.Itoa(maxconn))
 }

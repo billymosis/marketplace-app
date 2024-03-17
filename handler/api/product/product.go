@@ -12,7 +12,7 @@ import (
 	"github.com/billymosis/marketplace-app/model"
 	as "github.com/billymosis/marketplace-app/store/account"
 	ps "github.com/billymosis/marketplace-app/store/product"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 )
 

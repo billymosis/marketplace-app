@@ -7,16 +7,17 @@ import (
 	"github.com/billymosis/marketplace-app/model"
 	"github.com/billymosis/marketplace-app/service/auth"
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
 type AccountStore struct {
-	db       *sql.DB
+	db       *pgxpool.Pool
 	Validate *validator.Validate
 }
 
-func NewAccountStore(db *sql.DB, validate *validator.Validate) *AccountStore {
+func NewAccountStore(db *pgxpool.Pool, validate *validator.Validate) *AccountStore {
 	return &AccountStore{
 		db:       db,
 		Validate: validate,
@@ -29,7 +30,7 @@ func (ps *AccountStore) Create(ctx context.Context, account *model.Account) (*mo
 		return nil, errors.Wrap(err, "failed to get user id")
 	}
 	query := "INSERT INTO accounts (bank_name, bank_account_name, bank_account_number, user_id) VALUES($1, $2, $3, $4) RETURNING id"
-	err = ps.db.QueryRowContext(ctx, query, account.Name, account.AccountName, account.AccountNumber, userId).Scan(&account.Id)
+	err = ps.db.QueryRow(ctx, query, account.Name, account.AccountName, account.AccountNumber, userId).Scan(&account.Id)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create account")
@@ -40,12 +41,12 @@ func (ps *AccountStore) Create(ctx context.Context, account *model.Account) (*mo
 
 func (ps *AccountStore) Update(ctx context.Context, account *model.Account) (*model.Account, error) {
 	query := "UPDATE accounts SET bank_name=$1, bank_account_name=$2, bank_account_number=$3 WHERE id=$4"
-	result, err := ps.db.ExecContext(ctx, query, account.Name, account.AccountName, account.AccountNumber, account.Id)
+	result, err := ps.db.Exec(ctx, query, account.Name, account.AccountName, account.AccountNumber, account.Id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update account")
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected  := result.RowsAffected()
 	if rowsAffected == 0 {
 		return nil, sql.ErrNoRows
 	}
@@ -55,12 +56,12 @@ func (ps *AccountStore) Update(ctx context.Context, account *model.Account) (*mo
 
 func (ps *AccountStore) Delete(ctx context.Context, id uint) error {
 	query := "DELETE FROM accounts WHERE id = $1"
-	result, err := ps.db.ExecContext(ctx, query, id)
+	result, err := ps.db.Exec(ctx, query, id)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete account")
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected  := result.RowsAffected()
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
 	}
@@ -70,7 +71,7 @@ func (ps *AccountStore) Delete(ctx context.Context, id uint) error {
 
 func (ps *AccountStore) Get(ctx context.Context) ([]*model.Account, error) {
 	query := "SELECT * FROM accounts"
-	rows, err := ps.db.Query(query)
+	rows, err := ps.db.Query(ctx, query)
 	if err != nil {
 		return nil, errors.Wrap(err, "Get account failed")
 	}
@@ -94,7 +95,7 @@ func (ps *AccountStore) GetAccountByUser(ctx context.Context, id uint) ([]*model
 	query := "SELECT * FROM accounts WHERE user_id = $1"
 	logrus.Printf("%+v\n", query)
 
-	rows, err := ps.db.Query(query, id)
+	rows, err := ps.db.Query(ctx, query, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "Get account failed")
 	}

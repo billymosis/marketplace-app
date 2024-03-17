@@ -12,8 +12,8 @@ import (
 	"github.com/billymosis/marketplace-app/service/image"
 	as "github.com/billymosis/marketplace-app/store/account"
 	ps "github.com/billymosis/marketplace-app/store/product"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -72,9 +72,10 @@ func (s Server) Handler() http.Handler {
 		r.Route("/bank/account", func(r chi.Router) {
 			r.Use(AppMiddleware.ValidateJWT)
 			r.Post("/", account.Create(s.Accounts))
+			r.Get("/", account.Get(s.Accounts))
+			r.Patch("/", account.Update(s.Accounts))
 			r.Patch("/{id}", account.Update(s.Accounts))
 			r.Delete("/{id}", account.Delete(s.Accounts))
-			r.Get("/", account.Get(s.Accounts))
 		})
 	})
 
