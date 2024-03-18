@@ -1,11 +1,9 @@
 package model
 
 import (
-	"context"
 	"os"
 	"strconv"
 
-	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -13,13 +11,6 @@ const (
 	devSaltRounds  = 8
 	prodSaltRounds = 10
 )
-
-type UserStore interface {
-	GetById(ctx context.Context, id uint) (*User, error)
-	GetByUsername(ctx context.Context, name string) (*User, error)
-	CreateUser(context.Context, *User) (*User, error)
-	GetValidator() *validator.Validate
-}
 
 type User struct {
 	Id       uint   `json:"id"`

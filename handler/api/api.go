@@ -8,10 +8,10 @@ import (
 	"github.com/billymosis/marketplace-app/handler/api/product"
 	"github.com/billymosis/marketplace-app/handler/api/user"
 	"github.com/billymosis/marketplace-app/middleware"
-	"github.com/billymosis/marketplace-app/model"
 	"github.com/billymosis/marketplace-app/service/image"
 	as "github.com/billymosis/marketplace-app/store/account"
 	ps "github.com/billymosis/marketplace-app/store/product"
+	us "github.com/billymosis/marketplace-app/store/user"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
@@ -20,13 +20,13 @@ import (
 )
 
 type Server struct {
-	Users    model.UserStore
+	Users    *us.UserStore
 	Products *ps.ProductStore
 	Accounts *as.AccountStore
 	S3Client *s3.Client
 }
 
-func New(users model.UserStore, products *ps.ProductStore, accounts *as.AccountStore, s3client *s3.Client) Server {
+func New(users *us.UserStore, products *ps.ProductStore, accounts *as.AccountStore, s3client *s3.Client) Server {
 	return Server{
 		Users:    users,
 		Products: products,

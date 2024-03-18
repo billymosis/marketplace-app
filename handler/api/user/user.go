@@ -8,11 +8,12 @@ import (
 	"github.com/billymosis/marketplace-app/handler/render"
 	"github.com/billymosis/marketplace-app/model"
 	"github.com/billymosis/marketplace-app/service/auth"
+	us "github.com/billymosis/marketplace-app/store/user"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
-func HandleAuthentication(us model.UserStore) http.HandlerFunc {
+func HandleAuthentication(us *us.UserStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req loginUserRequest
 
@@ -29,7 +30,7 @@ func HandleAuthentication(us model.UserStore) http.HandlerFunc {
 			return
 		}
 
-		if err := us.GetValidator().Struct(req); err != nil {
+		if err := us.Validate.Struct(req); err != nil {
 			render.BadRequest(w, err)
 			return
 		}
@@ -65,7 +66,7 @@ func HandleAuthentication(us model.UserStore) http.HandlerFunc {
 	}
 }
 
-func HandleRegistration(us model.UserStore) http.HandlerFunc {
+func HandleRegistration(us *us.UserStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var req createUserRequest
@@ -81,7 +82,7 @@ func HandleRegistration(us model.UserStore) http.HandlerFunc {
 			return
 		}
 
-		if err := us.GetValidator().Struct(req); err != nil {
+		if err := us.Validate.Struct(req); err != nil {
 			render.BadRequest(w, err)
 			return
 		}
